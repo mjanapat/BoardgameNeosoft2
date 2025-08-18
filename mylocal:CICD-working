@@ -99,3 +99,62 @@ pipeline {
         
      }
 }
+
+
+NOTE:
+
+DOCKER-HUB substitute with GHCR:
+
+✅ Example Jenkinsfile Stage for GHCR
+stage('Image push to GHCR') {
+    steps {
+        script {
+            docker.withRegistry('https://ghcr.io', 'ghcr-cred') {
+                sh "docker tag boardshark:latest ghcr.io/maruthi27/boardshark/boardshark:latest"
+                sh "docker push ghcr.io/maruthi27/boardshark/boardshark:latest"
+            }
+        }
+    }
+}
+
+🔹 Explanation
+
+https://ghcr.io → GHCR endpoint
+
+ghcr-cred → Jenkins credentials (must be configured in Jenkins UI)
+
+Username → your GitHub username
+
+Password/Token → GitHub PAT with write:packages scope
+
+docker tag → required because GHCR needs the ghcr.io/... format
+
+docker push → uploads to GHCR
+
+🔹 Jenkins Credentials Setup
+
+In Jenkins UI → Manage Jenkins → Credentials
+
+Add new credentials:
+
+Kind: Username with password
+
+Username: your GitHub username
+
+Password: your PAT (Personal Access Token)
+
+ID: ghcr-cred
+
+🔹 Result
+
+After pipeline runs, your image will be available at:
+
+ghcr.io/maruthi27/boardshark/boardshark:latest
+
+
+You can then pull it with:
+
+docker pull ghcr.io/maruthi27/boardshark/boardshark:latest
+
+
+👉 Do you want me to also show you how to use the same GHCR image inside your kubeadm Kubernetes cluster, with the proper imagePullSecrets?
