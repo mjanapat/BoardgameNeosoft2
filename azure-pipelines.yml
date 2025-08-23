@@ -1,0 +1,145 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  SCANNER_HOME: $(SonarScannerPath)
+  DOCKER_IMAGE: maruthi27/boardshark:latest
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: Checkout
+  jobs:
+  - job: GitCheckout
+    steps:
+    - checkout: self
+      clean: true
+
+- stage: Compile
+  jobs:
+  - job: CompileCode
+    steps:
+    - task: Maven@3
+      inputs:
+        mavenPomFile: 'pom.xml'
+        goals: 'compile'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '1.17'
+        mavenVersionOption: 'Default'
+
+- stage: Test
+  jobs:
+  - job: RunTests
+    steps:
+    - task: Maven@3
+      inputs:
+        mavenPomFile: 'pom.xml'
+        goals: 'test'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '1.17'
+        mavenVersionOption: 'Default'
+
+- stage: FileSystemScan
+  jobs:
+  - job: TrivyFS
+    steps:
+    - script: |
+        trivy fs --format table -o trivy-fs-report.html .
+
+- stage: SonarQubeAnalysis
+  jobs:
+  - job: SonarScan
+    steps:
+    - task: SonarQubePrepare@5
+      inputs:
+        SonarQube: 'sonar'  # Service connection name
+        scannerMode: 'CLI'
+        configMode: 'manual'
+        cliProjectKey: 'BoardGame'
+        cliProjectName: 'BoardGame'
+        cliSources: '.'
+    - task: SonarQubeAnalyze@5
+    - task: SonarQubePublish@5
+      inputs:
+        pollingTimeoutSec: '300'
+
+- stage: Build
+  jobs:
+  - job: PackageApp
+    steps:
+    - task: Maven@3
+      inputs:
+        mavenPomFile: 'pom.xml'
+        goals: 'package'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '1.17'
+
+- stage: PublishToNexus
+  jobs:
+  - job: NexusDeploy
+    steps:
+    - task: Maven@3
+      inputs:
+        mavenPomFile: 'pom.xml'
+        goals: 'deploy'
+        options: '-s settings.xml'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '1.17'
+
+- stage: DockerBuildTag
+  jobs:
+  - job: DockerBuild
+    steps:
+    - task: Docker@2
+      inputs:
+        containerRegistry: 'docker-cred'
+        repository: 'maruthi27/boardshark'
+        command: 'buildAndPush'
+        Dockerfile: '**/Dockerfile'
+        tags: |
+          latest
+
+- stage: DockerImageScan
+  jobs:
+  - job: TrivyImage
+    steps:
+    - script: |
+        trivy image --format table -o trivy-image-report.html $(DOCKER_IMAGE)
+
+- stage: DeployToK8s
+  jobs:
+  - job: K8sDeploy
+    steps:
+    - task: Kubernetes@1
+      inputs:
+        connectionType: 'KubeConfig'
+        kubeconfig: '$(KUBECONFIG)'
+        command: 'apply'
+        useConfigurationFile: true
+        configuration: 'deployment-service.yaml'
+
+- stage: VerifyK8s
+  jobs:
+  - job: VerifyDeploy
+    steps:
+    - task: Kubernetes@1
+      inputs:
+        connectionType: 'KubeConfig'
+        kubeconfig: '$(KUBECONFIG)'
+        command: 'get'
+        arguments: 'pods -n webapps'
+    - task: Kubernetes@1
+      inputs:
+        connectionType: 'KubeConfig'
+        kubeconfig: '$(KUBECONFIG)'
+        command: 'get'
+        arguments: 'svc -n webapps'
+
