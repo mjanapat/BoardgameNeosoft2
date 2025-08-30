@@ -135,26 +135,26 @@ docker push → uploads to GHCR
 
 In Jenkins UI → Manage Jenkins → Credentials
 
-Add new credentials:
+###Add new credentials:
 
-Kind: Username with password
+###Kind: Username with password
 
-Username: your GitHub username
+###Username: your GitHub username
 
-Password: your PAT (Personal Access Token)
+###Password: your PAT (Personal Access Token)
 
-ID: ghcr-cred
+###ID: ghcr-cred
 
-🔹 Result
+###🔹 Result
 
-After pipeline runs, your image will be available at:
+###After pipeline runs, your image will be available at:
 
-ghcr.io/maruthi27/boardshark/boardshark:latest
-
-
-You can then pull it with:
-
-docker pull ghcr.io/maruthi27/boardshark/boardshark:latest
+###ghcr.io/maruthi27/boardshark/boardshark:latest
 
 
-👉 Do you want me to also show you how to use the same GHCR image inside your kubeadm Kubernetes cluster, with the proper imagePullSecrets?
+##You can then pull it with:
+
+###docker pull ghcr.io/maruthi27/boardshark/boardshark:latest
+
+
+###👉 Do you want me to also show you how to use the same GHCR image inside your kubeadm Kubernetes cluster, with the proper imagePullSecrets?
